@@ -98,6 +98,21 @@ key_sites <- c(
   carto = "https://carto.com/basemaps/apikey/"
 )
 
+# map area for the zoom slider: 0 shows all data, each step zooms in (positive)
+# or out (negative) on the centre of the data by a factor of 1.5, limited to
+# the extent of Web Mercator
+zoom_bb <- function(bb, zoom) {
+  lim <- 20037508.34
+  f <- 1.5^(-zoom)
+  cx <- (bb[["xmin"]] + bb[["xmax"]]) / 2
+  cy <- (bb[["ymin"]] + bb[["ymax"]]) / 2
+  hw <- (bb[["xmax"]] - bb[["xmin"]]) / 2 * f
+  hh <- (bb[["ymax"]] - bb[["ymin"]]) / 2 * f
+  bb[c("xmin", "xmax")] <- pmin(pmax(c(cx - hw, cx + hw), -lim), lim)
+  bb[c("ymin", "ymax")] <- pmin(pmax(c(cy - hh, cy + hh), -lim), lim)
+  bb
+}
+
 # CARTO now needs a key ("?key=" in the tile URL), but basemaps 0.1.1 has no
 # key parameter for it: add it to basemaps' service table, unless a newer
 # basemaps version already has one
@@ -195,7 +210,6 @@ shinyModuleUserInterface <- function(id, label) {
                         value = Sys.getenv("MAP_API_KEY")),
           uiOutput(ns("key_help"))
         ),
-    
         radioButtons(ns("zoomin"),
                      label = tagList(
                        "Resolution of background map",
@@ -205,6 +219,8 @@ shinyModuleUserInterface <- function(id, label) {
                      choices = list("very low" = -2, "low" = -1, "high" = 0, "very high" = 1),
                      selected = -2),
         helpText("A very high resolution for data covering a large area downloads many tiles and can be slow."),
+        sliderInput(ns("map_zoom"), label = "Zoom", min = -3, max = 3, value = 0, step = 1),
+        helpText("0 shows all tracks. Positive values zoom in on the centre of the tracks, negative values show more of the surroundings."),
         hr(),
         h4("Tracks"),
         selectInput(ns("track_pal"), label = "Colour palette",
@@ -254,12 +270,11 @@ shinyModule <- function(input, output, session, data) {
     lns$track_ <- as.character(lns[[mt_track_id_column(pts)]])
   }
   
-  # map extent with a small margin
-  bb <- sf::st_bbox(pts)
-  pad <- max(bb["xmax"] - bb["xmin"], bb["ymax"] - bb["ymin"], 1000) * 0.05
-  bb[c("xmin", "ymin")] <- bb[c("xmin", "ymin")] - pad
-  bb[c("xmax", "ymax")] <- bb[c("xmax", "ymax")] + pad
-  ext <- sf::st_as_sfc(bb)
+  # extent of all data with a small margin; the zoom slider starts from it
+  bb_data <- sf::st_bbox(pts)
+  pad <- max(bb_data["xmax"] - bb_data["xmin"], bb_data["ymax"] - bb_data["ymin"], 1000) * 0.05
+  bb_data[c("xmin", "ymin")] <- bb_data[c("xmin", "ymin")] - pad
+  bb_data[c("xmax", "ymax")] <- bb_data[c("xmax", "ymax")] + pad
   
   map_dir <- file.path(tempdir(), "basemaps")
   dir.create(map_dir, showWarnings = FALSE)
@@ -267,21 +282,30 @@ shinyModule <- function(input, output, session, data) {
   settings_now <- reactive({
     list(maptype = if (identical(input$map_source, "key")) input$maptype_key else input$maptype,
          api_key = input$api_key,
-         zoomin = as.numeric(input$zoomin), legend = input$legend, track_pal = input$track_pal,
+         zoomin = as.numeric(input$zoomin), map_zoom = as.numeric(input$map_zoom),
+         legend = input$legend, track_pal = input$track_pal,
          xlab_angle = as.numeric(input$xlab_angle), xlab_n = input$xlab_n)
   })
   
   # the map is drawn once with the settings the App opens with (stored settings
   # are restored by then), afterwards only when Apply Changes is clicked.
-  # bg_settings only changes when the map type, key or resolution change, so
-  # other settings do not download the tiles again
+  # bg_settings only changes when the map type, key, resolution or zoom change,
+  # so other settings do not download the tiles again
   settings <- reactiveVal(NULL)
   bg_settings <- reactiveVal(NULL)
   apply_settings <- function() {
     s <- settings_now()
     settings(s)
-    bg_settings(s[c("maptype", "api_key", "zoomin")])
+    bg_settings(s[c("maptype", "api_key", "zoomin", "map_zoom")])
   }
+  
+  # help text follows the dropdown directly, it does not wait for Apply
+  output$key_help <- renderUI({
+    req(input$maptype_key)
+    site <- key_sites[[sub(":.*", "", input$maptype_key)]]
+    helpText("Get a free key at ", tags$a(href = site, target = "_blank", site),
+             ". The key is not stored with the settings.")
+  })
   observeEvent(req(input$maptype, input$xlab_n), apply_settings(), once = TRUE)
   observeEvent(input$apply, apply_settings(), ignoreInit = TRUE)
   
@@ -291,13 +315,15 @@ shinyModule <- function(input, output, session, data) {
     req(s$maptype)
     service <- sub(":.*", "", s$maptype)
     type <- sub(".*:", "", s$maptype)
+    bb <- zoom_bb(bb_data, if (is.null(s$map_zoom)) 0 else s$map_zoom)
+    ext <- sf::st_as_sfc(bb)
     if (service %in% key_services && (is.null(s$api_key) || !nzchar(s$api_key))) {
-      return(list(layer = NULL, service = service,
-                  msg = "This map type needs an API key, which is not stored with the settings. Enter the key and click Apply Changes; until then the tracks are shown without a background map."))
+      return(list(layer = NULL, service = service, bb = bb,
+                  msg = "This map type needs an API key. Enter it in the sidebar; the tracks are shown without a background map."))
     }
     if (service == "carto" && !carto_key_ok(type, s$api_key)) {
       logger.info("CARTO did not accept the API key.")
-      return(list(layer = NULL, service = service,
+      return(list(layer = NULL, service = service, bb = bb,
                   msg = "CARTO did not accept this API key. Check the key; the tracks are shown without a background map."))
     }
     z <- tile_zoom(bb, s$zoomin)
@@ -318,23 +344,18 @@ shinyModule <- function(input, output, session, data) {
         structure(conditionMessage(e), class = "map_error")
       })
     if (inherits(layer, "map_error")) {
-      msg <- if (grepl("Authentification failed", layer)) {
-        "The map provider did not accept this API key. Check the key and click Apply Changes; the tracks are shown without a background map."
-      } else {
-        paste("The background map could not be loaded, the tracks are shown without it.",
-              "Check the API key or try another map type. Details:", layer)
-      }
-      return(list(layer = NULL, service = service, msg = msg))
+      return(list(layer = NULL, service = service, bb = bb,
+                  msg = paste("The background map could not be loaded, the tracks are shown without it.",
+                              "Check the API key or try another map type. Details:", layer)))
     }
-    
-    
-    list(layer = layer, service = service, msg = msg)
+    list(layer = layer, service = service, bb = bb, msg = msg)
   })
   
   map_plot <- reactive({
     s <- settings()
     req(s)
     bg <- background()
+    bb <- bg$bb
     nx <- if (s$xlab_n == "auto") {
       ratio <- (bb["xmax"] - bb["xmin"]) / (bb["ymax"] - bb["ymin"])
       if (ratio < 0.6) 2 else if (ratio < 1.2) 3 else 5
@@ -361,18 +382,6 @@ shinyModule <- function(input, output, session, data) {
     if (!s$legend) mp <- mp + guides(color = "none")
     mp
   })
-  
-  # help text follows the dropdown directly, it does not wait for Apply
-  output$key_help <- renderUI({
-    req(input$maptype_key)
-    site <- key_sites[[sub(":.*", "", input$maptype_key)]]
-    helpText("Get a free key at ", tags$a(href = site, target = "_blank", site),
-             ". The key is not stored with the settings.")
-  })
-  
-  
-  
-  
   
   output$map_msg <- renderText(background()$msg)
   
