@@ -1,105 +1,87 @@
-# Name of App *(Give your app a short and informative title. Please adhere to our convention of Title Case without hyphens (e.g. My New App))*
+# Open Street Map
 
 MoveApps
 
-Github repository: *github.com/yourAccount/Name-of-App* *(provide the link to the repository where the code of the App can be found)*
-
-*(Note: all text in italics are instructions for filling out this template. Please replace or delete them before publishing your App.)*
-
-*(Optional, but very helpful for Users: add here a screenshot or example figure of a typical result of the App, e.g. a plot, a map or a table. Save the image in the repository (e.g. in a folder `documentation/`) and include it with:*
-<p align="center">
-  <img alt="Screenshot of the Apps UI" src="documentation/screenshot_UI.png" width="600">
-</p>
-*)*
+Github repository: https://github.com/movestore/Open-Street-Map
 
 ## Description
-*Enter here the short description of the App that might also be used when filling out the description during App submission to MoveApps. This text is directly presented to Users that look through the list of Apps when compiling Workflows.*
+Plot your tracks as lines and points on a background map. Choose from OpenStreetMap, ESRI and, with an API key, Stadia/Stamen, Thunderforest, Mapbox, MapTiler and Carto maps, set the map resolution and colours, and download the map as PNG or PDF.
 
 ## Documentation
-*Enter here a detailed description of your App. What is it intended to be used for. Which steps of analyses are performed and how. Please be explicit about any detail that is important for use and understanding of the App and its outcomes. You might also refer to the sections below.*
+This App plots all tracks of the input data as lines with their locations as points on a background map that covers the extent of the data. The background map is downloaded as map tiles from the selected provider.
+
+The maps are split into two groups. Maps from OpenStreetMap and ESRI can be used without registration. Maps from Stadia/Stamen, Thunderforest, Mapbox, MapTiler and Carto need a personal API key, which can be obtained for free from the provider's website (a link to the website of the selected provider is shown in the App). The key is entered in the App and is never stored.
+
+The map is drawn once when the App opens, with the stored settings (or the defaults). Afterwards, changes of the settings are only applied after clicking `Apply Changes`. The background map is only downloaded again when the map type, the API key or the resolution change; other changes (colours, legend, axis labels) only redraw the map.
+
+For a first inspection of the different map types we recommend a low resolution, as it is much faster. The tracks are coloured by track; the colours stay the same with and without legend. The required credit of the map provider is shown below the map. The map can be downloaded as PNG and PDF file.
 
 ### Application scope
 #### Generality of App usability
-*State here if the App was developed for a specific species, taxon or taxonomic group, or to answer a specific question. How might it influence the scope and utility of the App. This information will help the user to understand why the App might be producing no or odd results.*
-
-*Examples:*
-
-This App was developed for any taxonomic group. 
-
-This App was developed using data of birds. 
-
-This App was developed using data of red deer. 
-
-This App was developed to identify kill sites, but can probably be used to identify any kind of location clusters like nests, dens or drinking holes.
+This App was developed for any taxonomic group.
 
 #### Required data properties
-*State here the required and/or optimal data properties for this App to perform properly.*
-
-*Examples:*
-
-This App is only applicable to data that reflect range resident behavior. 
-
-The data should have a fix rate of at least 1 location per 30 minutes. 
-
-The App should work for any kind of (location) data.
+The App should work for any kind of (location) data, in any coordinate reference system.
 
 ### Input type
-*Indicate which type of input data the App requires.*
-
-*Example:* `move2::move2_loc`
+`move2::move2_loc`
 
 ### Output type
-*Indicate which type of output data the App produces to be passed on to subsequent Apps.*
-
-*Example:* `move2::move2_loc`
+`move2::move2_loc`
 
 ### Artefacts
-*If the App creates artefacts (e.g. csv, pdf, jpeg, shapefiles, etc), please list them here and describe each.*
+none
 
-*Example:* `rest_overview.csv`: csv-file with Table of all rest site properties
+The following files can be downloaded optionally (to disk):
 
-### Settings 
-*Please list and define all settings that the App requires to be set by the App user, if necessary including their unit. Please state each of the settings that the user will encounter in the UI of the shiny app. Please also state the default value, if there is one.*
+`OpenStreetMap_<date>.png`: by clicking the `Save Map as PNG` button. Image of the map as currently shown in the App (10 x 8 inch, 300 dpi).
 
-*Example:* `Radius of resting site` (radius): Defined radius the animal has to stay in for a given duration of time for it to be considered resting site. Unit: `metres`.
+`OpenStreetMap_<date>.pdf`: by clicking the `Save Map as PDF` button. PDF of the map as currently shown in the App (10 x 8 inch).
 
-*Always include the "Store settings" and the "Restore default settings" here as it will appear automatically in all shiny apps*       
-`Store settings`: click to store the current settings of the App for future Workflow runs.     
+### Settings
+`Map source` (map_source): choose if the background map is selected from the maps that need no API key or from the maps that need an API key. Default: "No API key needed".
+
+`Background map type` (maptype), shown for "No API key needed": choose the background map. Options: OpenStreetMap ("OSM Streets", "OSM Streets DE", "OSM Topographic") and ESRI ("ESRI NatGeo World Map", "ESRI USA Topo Maps", "ESRI World Imagery", "ESRI World Physical Map", "ESRI World Shaded Relief", "ESRI World Street Map", "ESRI World Terrain Base", "ESRI World Topo Map", "ESRI World Dark Gray Base", "ESRI World Light Gray Base", "ESRI World Hillshade Dark", "ESRI World Hillshade", "ESRI World Ocean Base", "ESRI World Navigation Charts"). Default: "OSM Streets".
+
+`Background map type` (maptype_key), shown for "API key needed": choose the background map. Options: Stamen and Stadia ("Stamen Toner", "Stamen Toner BG", "Stamen Terrain", "Stamen Terrain BG", "Stamen Watercolor", "Stadia Alidade Smooth", "Stadia Alidade Smooth Dark", "Stadia Outdoors", "Stadia OSM Bright"), Thunderforest ("Thunderforest Cycle", "Thunderforest Transport", "Thunderforest Landscape", "Thunderforest Outdoors", "Thunderforest Transport Dark", "Thunderforest Spinal", "Thunderforest Pioneer", "Thunderforest Mobile Atlas", "Thunderforest Neighbourhood", "Thunderforest Atlas"), Mapbox ("Mapbox Streets", "Mapbox Outdoors", "Mapbox Light", "Mapbox Dark", "Mapbox Satellite", "Mapbox Hybrid"), MapTiler ("MapTiler Aquarelle", "MapTiler Backdrop", "MapTiler Basic", "MapTiler Bright", "MapTiler Dataviz", "MapTiler Landscape", "MapTiler Ocean", "MapTiler Outdoor", "MapTiler Satellite", "MapTiler Streets", "MapTiler Toner", "MapTiler Topo", "MapTiler Winter") and Carto ("Carto Light", "Carto Light No Labels", "Carto Dark", "Carto Dark No Labels", "Carto Voyager", "Carto Voyager No Labels", "Carto Voyager Labels Under"). Default: "Stadia Outdoors".
+
+`API key for the selected map provider` (api_key), shown for "API key needed": your personal API key of the provider of the selected map. A link to the website where the key can be obtained is shown below the field. For security reasons the key is not stored with the settings and has to be entered again each time the App is opened. No default.
+
+`Resolution of background map` (zoomin): resolution of the background map, relative to the extent of the data. Options: "very low", "low", "high", "very high". Each step doubles the number of map tiles along each side of the map. Default: "very low".
+
+`Colour palette` (track_pal): colour palette for the tracks. Options: "Glasbey", "Set1", "Set2", "Set3", "Dark2", "Paired", "Accent". If there are more tracks than the palette has colours, evenly spread colours are used instead. Default: "Glasbey".
+
+`Show legend with track names` (legend): choose if the track names are shown in a legend. Default: not shown.
+
+`Label direction` (xlab_angle): direction of the labels of the x-axis (longitude). Options: "horizontal", "45°", "vertical". Rotating the labels helps when they overlap. Default: "horizontal".
+
+`Number of labels` (xlab_n): number of labels on the x-axis. Options: "automatic", 2 to 8. With "automatic", fewer labels are used for narrow maps (2 for maps much taller than wide, 3 for about square maps, 5 for wide maps). Default: "automatic".
+
+`Apply Changes`: click to apply the changed settings to the map.
+
+`Store settings`: click to store the current settings of the App for future Workflow runs.
+
 `Restore default settings`: click to restore to the default setting values of the App.
 
 ### Changes in output data
-*Specify here how and if the App modifies the input data. Describe clearly what e.g. each additional column means.*
-
-*Examples:*
-
-The App adds to the input data the columns `Max_dist` and `Avg_dist`. They contain the maximum distance to the provided focal location and the average distance to it over all locations. 
-
-The App filters the input data as selected by the user. 
-
-The output data is the outcome of the model applied to the input data. 
-
 The input data remains unchanged.
 
 ### Errors and null handling
-*Please describe here the most common errors of the App: how they occur and the best ways of solving them. You can also indicate for settings, as well as for the input data, which behaviour the App is supposed to show in case of errors or NULL values/input, including possible errors that can happen if settings/parameters are improperly set. Add here also any other important information that you find the User should be aware of.*
+**Setting `API key for the selected map provider`:** If a map that needs an API key is selected and no key is entered, the tracks are shown without background map and a message asks to enter the key. This also happens after reopening the App with stored settings, as the key is not stored: enter the key and click `Apply Changes`.
 
-*Examples:*
+**Wrong API key:** If CARTO does not accept the key, a message states this and the tracks are shown without background map. If another provider does not accept the key, or the background map cannot be downloaded for other reasons (e.g. the map server cannot be reached), the tracks are shown without background map and a message with the details is shown. Check the key or choose another map type.
 
-**Setting `radius`:** If no radius AND no duration are given, the input data set is returned with a warning. If no radius is given (NULL), but a duration is defined then a default radius of 1000m = 1km is set. 
+**Setting `Resolution of background map`:** For data covering a large area, a high resolution would require very many map tiles. The resolution is then reduced automatically to stay below 400 tiles, and a message informs about it.
 
-**Input data:** If the input data contain fewer than 3 locations per track, the App stops with an error message stating which tracks are affected.
+**Input data:** Locations with empty coordinates are not plotted. Tracks with only one location are shown as a point without line. All locations remain in the output data.
 
-**Common error:** If the App is used on data with a very low fix rate, no resting sites are found and the App returns an empty data set. Adapt the settings `radius` and `duration` to the resolution of your data.
+**Scale bar:** The map is drawn in Web Mercator projection, in which distances are increasingly stretched towards the poles. The scale bar is therefore only correct close to the middle latitude of the map; for maps covering a wide range of latitudes it can be inaccurate at the top and bottom of the map.
 
 ### Technical details
-*Optional, but recommended. Summarize here how the App works "under the hood", so that Users and developers can get a quick idea of the methods, dependencies and assumptions without having to read the code. Keep it short (a few sentences or bullet points) and mention only what is not already obvious from the sections above.*
-
-*Suggested points to cover:*
-
-- *The main library/package(s) the core calculation relies on, ideally naming the central function(s) (e.g. `move2`, `sf`, `amt`, `ctmm`, `lme4`).*
-- *The method or algorithm applied, and the reference/publication it is based on, if any.*
-- *Assumptions made in the code (e.g. the locations are assumed to be independent).*
-- *The level at which the data are processed (e.g. per track/individual, per track and year, on the whole data set at once).*
-- *Anything relevant for performance (e.g. runtime or memory increases strongly with the number of locations, parallelization).*
-- *Known simplifications or limitations of the implementation.*
-
+- The background maps are downloaded with the `basemaps` package (`basemap_gglayer()`), and the map is drawn with `ggplot2`, `sf` and `ggspatial` (scale bar).
+- The map is drawn in Web Mercator projection (EPSG:3857), the projection of the map tiles. The axes show longitude and latitude. The data are transformed for plotting only; the output data keep their original projection.
+- The zoom level of the map tiles is calculated from the extent of the data: at "high" resolution the longer side of the map is covered by about 4 tiles. The number of tiles is limited to 400.
+- `basemaps` (version 0.1.1) does not send an API key to Carto, although CARTO now requires one. The App adds the key parameter to the Carto entries of the `basemaps` service list. Because CARTO answers a wrong key with a watermark image instead of an error, the App compares one tile downloaded with the given key with one downloaded with a dummy key to detect a rejected key.
+- Map tiles are cached during a session. For maps that need an API key they are always downloaded again, so that tiles from an earlier, wrong key are not reused.
+- Track colours are taken from `pals` (Glasbey) or `RColorBrewer`; with more tracks than palette colours, colours with evenly spread hues (golden angle) and alternating lightness are generated.
+- For local testing, the API key field can be pre-filled from the environment variable `MAP_API_KEY` (e.g. set in a `.Renviron` file that is excluded from git). On MoveApps this variable is not set, so the field is empty.

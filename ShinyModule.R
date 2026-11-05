@@ -88,6 +88,16 @@ map_choices_key <- list(
 # services for which basemaps sends the API key
 key_services <- c("osm_stamen", "osm_stadia", "osm_thunderforest", "mapbox", "maptiler", "carto")
 
+# where to get a key, per service
+key_sites <- c(
+  osm_stamen = "https://stadiamaps.com/",
+  osm_stadia = "https://stadiamaps.com/",
+  osm_thunderforest = "https://www.thunderforest.com/",
+  mapbox = "https://www.mapbox.com/",
+  maptiler = "https://www.maptiler.com/",
+  carto = "https://carto.com/basemaps/apikey/"
+)
+
 # CARTO now needs a key ("?key=" in the tile URL), but basemaps 0.1.1 has no
 # key parameter for it: add it to basemaps' service table, unless a newer
 # basemaps version already has one
@@ -183,10 +193,15 @@ shinyModuleUserInterface <- function(id, label) {
                       choices = map_choices_key, selected = "osm_stadia:outdoors"),
           passwordInput(ns("api_key"), label = "API key for the selected map provider",
                         value = Sys.getenv("MAP_API_KEY")),
-          helpText("Get a free key on the provider's website. The key is not stored with the settings.")
+          uiOutput(ns("key_help"))
         ),
-        helpText("Try out map types at a low resolution, it is faster."),
-        radioButtons(ns("zoomin"), label = "Resolution of background map",
+    
+        radioButtons(ns("zoomin"),
+                     label = tagList(
+                       "Resolution of background map",
+                       helpText("Try out map types at a low resolution, it is faster.",
+                                style = "font-weight: normal; margin: 2px 0 0;")
+                     ),
                      choices = list("very low" = -2, "low" = -1, "high" = 0, "very high" = 1),
                      selected = -2),
         helpText("A very high resolution for data covering a large area downloads many tiles and can be slow."),
@@ -278,7 +293,7 @@ shinyModule <- function(input, output, session, data) {
     type <- sub(".*:", "", s$maptype)
     if (service %in% key_services && (is.null(s$api_key) || !nzchar(s$api_key))) {
       return(list(layer = NULL, service = service,
-                  msg = "This map type needs an API key. Enter it in the sidebar; the tracks are shown without a background map."))
+                  msg = "This map type needs an API key, which is not stored with the settings. Enter the key and click Apply Changes; until then the tracks are shown without a background map."))
     }
     if (service == "carto" && !carto_key_ok(type, s$api_key)) {
       logger.info("CARTO did not accept the API key.")
@@ -303,10 +318,16 @@ shinyModule <- function(input, output, session, data) {
         structure(conditionMessage(e), class = "map_error")
       })
     if (inherits(layer, "map_error")) {
-      return(list(layer = NULL, service = service,
-                  msg = paste("The background map could not be loaded, the tracks are shown without it.",
-                              "Check the API key or try another map type. Details:", layer)))
+      msg <- if (grepl("Authentification failed", layer)) {
+        "The map provider did not accept this API key. Check the key and click Apply Changes; the tracks are shown without a background map."
+      } else {
+        paste("The background map could not be loaded, the tracks are shown without it.",
+              "Check the API key or try another map type. Details:", layer)
+      }
+      return(list(layer = NULL, service = service, msg = msg))
     }
+    
+    
     list(layer = layer, service = service, msg = msg)
   })
   
@@ -340,6 +361,18 @@ shinyModule <- function(input, output, session, data) {
     if (!s$legend) mp <- mp + guides(color = "none")
     mp
   })
+  
+  # help text follows the dropdown directly, it does not wait for Apply
+  output$key_help <- renderUI({
+    req(input$maptype_key)
+    site <- key_sites[[sub(":.*", "", input$maptype_key)]]
+    helpText("Get a free key at ", tags$a(href = site, target = "_blank", site),
+             ". The key is not stored with the settings.")
+  })
+  
+  
+  
+  
   
   output$map_msg <- renderText(background()$msg)
   
