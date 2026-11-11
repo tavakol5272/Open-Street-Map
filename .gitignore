@@ -10,3 +10,4 @@ data/output/**
 .config/
 .local/
 shiny_bookmarks/
+.Renviron
