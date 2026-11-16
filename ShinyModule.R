@@ -255,12 +255,15 @@ shinyModuleUserInterface <- function(id, label) {
 shinyModule <- function(input, output, session, data) {
   current <- reactiveVal(data)
   enable_carto_key()
+  # the API key is personal: never store it with the App settings
+  setBookmarkExclude("api_key")
   
   # plotting copies in Web Mercator; the data passed on is not changed
   pts <- data[!sf::st_is_empty(data), ]
   pts <- sf::st_transform(pts, 3857)
   pts$track_ <- as.character(mt_track_id(pts))
   ids <- unique(pts$track_)
+  if (nrow(pts) == 0) logger.warn("The input data contains no locations with coordinates, nothing to plot.")
   
   # tracks with a single location cannot be drawn as lines
   multi <- names(which(table(pts$track_) > 1))
@@ -312,7 +315,7 @@ shinyModule <- function(input, output, session, data) {
   # background layer
   background <- reactive({
     s <- bg_settings()
-    req(s$maptype)
+    req(s$maptype, nrow(pts) > 0)
     service <- sub(":.*", "", s$maptype)
     type <- sub(".*:", "", s$maptype)
     bb <- zoom_bb(bb_data, if (is.null(s$map_zoom)) 0 else s$map_zoom)
@@ -354,6 +357,7 @@ shinyModule <- function(input, output, session, data) {
   map_plot <- reactive({
     s <- settings()
     req(s)
+    validate(need(nrow(pts) > 0, "No locations to plot: the input data contains no locations with coordinates."))
     bg <- background()
     bb <- bg$bb
     nx <- if (s$xlab_n == "auto") {
@@ -379,7 +383,8 @@ shinyModule <- function(input, output, session, data) {
       theme(axis.text.x = element_text(angle = s$xlab_angle,
                                        hjust = if (s$xlab_angle == 0) 0.5 else 1,
                                        vjust = if (s$xlab_angle == 90) 0.5 else 1))
-    if (!s$legend) mp <- mp + guides(color = "none")
+    # one legend column per 30 tracks, so all track names stay visible
+    mp <- mp + guides(color = if (s$legend) guide_legend(ncol = ceiling(length(ids) / 30)) else "none")
     mp
   })
   
