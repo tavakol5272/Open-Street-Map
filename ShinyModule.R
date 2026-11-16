@@ -385,7 +385,12 @@ shinyModule <- function(input, output, session, data) {
   
   output$map_msg <- renderText(background()$msg)
   
-  output$map <- renderPlot(map_plot())
+  # the legend looks small on screen, so it is one size larger here than in
+  # the downloaded PNG/PDF (default: text 8.8 pt, title 11 pt)
+  output$map <- renderPlot(
+    map_plot() + theme(legend.text = element_text(size = 15),
+                       legend.title = element_text(size = 17))
+  )
   
   #### map as PNG
   output$save_png <- downloadHandler(
